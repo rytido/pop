@@ -3,6 +3,7 @@ from time import sleep, time
 import struct
 import numpy as np
 import pyaudio
+import wave
 
 FPS = 20.0
 window_time = 10
@@ -16,8 +17,9 @@ FORMAT = pyaudio.paInt16
 CHANNELS = 2
 RATE = 44100
 xsl = int(FPS * window_time - 1)
+chunk=4096
 
-FREQ = 400
+FREQ = 600
 RATE = 44100 # times/sec
 def make_sin(length):
   length = int(length * RATE)
@@ -49,7 +51,7 @@ def detect(stream, MAX_y):
   return x
 
 
-def main(stream, out_stream):
+def main(stream, out_stream, data):
   # Used for normalizing signal. If usout_streame paFloat32, then it's already -1..1.
   # Because of saving wave, paInt16 will be easier.
   MAX_y = 2.0 ** (p.get_sample_size(FORMAT) * 8 - 1)
@@ -70,7 +72,8 @@ def main(stream, out_stream):
         ok_to_trigger = True
       
       if ok_to_trigger and x > m + .1: #+ std_above * s:
-        play_tone(out_stream, .2)
+        #play_tone(out_stream, .2)
+        out_stream.write(data)
         print(x, m)
         t0 = time()
         ok_to_trigger = False
@@ -82,20 +85,31 @@ if __name__ == '__main__':
    # Frequency range
   x_f = 1.0 * np.arange(-nFFT / 2 + 1, nFFT / 2) / nFFT * RATE
 
+  wf = wave.open('pop.wav', 'rb')
+  data = wf.readframes(chunk)
+
   p = pyaudio.PyAudio()
+
+  out_stream = p.open(format = p.get_format_from_width(wf.getsampwidth()),
+                channels = wf.getnchannels(),
+                rate = wf.getframerate(),
+                output = True)
+
   stream = p.open(format=FORMAT,
                 channels=CHANNELS,
                 rate=RATE,
                 input=True,
                 frames_per_buffer=BUF_SIZE)
 
-  out_stream = p.open(format=pyaudio.paFloat32, channels=1, rate=RATE, output=1)
+  #out_stream = p.open(format=pyaudio.paFloat32, channels=1, rate=RATE, output=1)
 
   try:
-    main(stream, out_stream)
+    main(stream, out_stream, data)
   except KeyboardInterrupt:
     print('Exiting')
+    wf.close()
     stream.stop_stream()
     stream.close()
+    out_stream.close()
     p.terminate()
     sys.exit(0)
