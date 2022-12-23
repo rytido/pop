@@ -8,8 +8,8 @@ import wave
 FPS = 40.0
 window_time = 4
 min_period = 0.2
-factor_above = 1.5
-factor_below = .75
+factor_above = 1.8
+factor_below = .7
 mean_threshold = .02
 nFFT = 128
 BUF_SIZE = 4 * nFFT
@@ -18,17 +18,9 @@ CHANNELS = 2
 RATE = 44100
 xsl = int(FPS * window_time - 1)
 chunk=4096
-
-FREQ = 600
-RATE = 44100 # times/sec
-def make_sin(length):
-  length = int(length * RATE)
-  factor = FREQ * np.pi * 2 / RATE
-  return np.sin(np.arange(length) * factor)
-
-def play_tone(stream, length):
-    sin = make_sin(length)
-    stream.write(sin.astype(np.float32))
+freq_window_pct = .2
+l = int(nFFT/2 * (1-freq_window_pct))
+u = int(nFFT/2 * (1+freq_window_pct))
 
 
 def detect(stream, MAX_y):
@@ -47,7 +39,7 @@ def detect(stream, MAX_y):
 
   # Sewing FFT of two channels together, DC part uses right channel's
   Y = abs(np.hstack((Y_L[int(-nFFT / 2):-1], Y_R[:int(nFFT / 2)])))
-  x = Y.mean()
+  x = Y[l:u].mean()
   return x
 
 
@@ -65,16 +57,11 @@ def main(stream, out_stream, data):
     t = time()
     if xs.shape[0] > 50:
       m = xs.mean()
-      #u = xs.max()
-      #l = xs.min()
-      #s = np.std(xs)
-      #m - std_below * s or m < mean_threshold
       if not ok_to_trigger and t - t0 > min_period and x < m * factor_below:
         print("OK TO TRIGGER")
         ok_to_trigger = True
-      
+
       if ok_to_trigger and x > m * factor_above + .1: #+ std_above * s:
-        #play_tone(out_stream, .2)
         out_stream.write(data)
         print(x, m)
         t0 = time()
@@ -88,6 +75,7 @@ if __name__ == '__main__':
   x_f = 1.0 * np.arange(-nFFT / 2 + 1, nFFT / 2) / nFFT * RATE
 
   wf = wave.open('pop.wav', 'rb')
+  dump = wf.readframes(512)
   data = wf.readframes(chunk)
 
   p = pyaudio.PyAudio()
