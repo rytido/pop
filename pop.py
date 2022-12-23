@@ -5,13 +5,13 @@ import numpy as np
 import pyaudio
 import wave
 
-FPS = 20.0
-window_time = 10
-min_period = 0.25
-std_above = 1
-std_below = .8
+FPS = 40.0
+window_time = 4
+min_period = 0.2
+factor_above = 1.5
+factor_below = .75
 mean_threshold = .02
-nFFT = 512
+nFFT = 128
 BUF_SIZE = 4 * nFFT
 FORMAT = pyaudio.paInt16
 CHANNELS = 2
@@ -65,13 +65,15 @@ def main(stream, out_stream, data):
     t = time()
     if xs.shape[0] > 50:
       m = xs.mean()
+      #u = xs.max()
+      #l = xs.min()
       #s = np.std(xs)
       #m - std_below * s or m < mean_threshold
-      if not ok_to_trigger and t - t0 > min_period and (x < m/4 or m < mean_threshold):
+      if not ok_to_trigger and t - t0 > min_period and x < m * factor_below:
         print("OK TO TRIGGER")
         ok_to_trigger = True
       
-      if ok_to_trigger and x > m + .1: #+ std_above * s:
+      if ok_to_trigger and x > m * factor_above + .1: #+ std_above * s:
         #play_tone(out_stream, .2)
         out_stream.write(data)
         print(x, m)
