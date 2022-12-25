@@ -1,0 +1,4 @@
+tmux
+tmux attach
+ctrl + b, d
+exit
