@@ -10,7 +10,6 @@ window_time = 4
 min_period = 0.2
 factor_above = 1.8
 factor_below = .7
-mean_threshold = .02
 nFFT = 128
 BUF_SIZE = 4 * nFFT
 FORMAT = pyaudio.paInt16
@@ -24,7 +23,6 @@ u = int(nFFT/2 * (1+freq_window_pct))
 
 
 def detect(stream, MAX_y):
-
   # Read n*nFFT frames from stream, n > 0
   N = int(max(stream.get_read_available() / nFFT, 1) * nFFT)
   data = stream.read(N)
@@ -61,7 +59,7 @@ def main(stream, out_stream, data):
         print("OK TO TRIGGER")
         ok_to_trigger = True
 
-      if ok_to_trigger and x > m * factor_above + .1: #+ std_above * s:
+      if ok_to_trigger and x > m * factor_above + .1:
         out_stream.write(data)
         print(x, m)
         t0 = time()
@@ -71,9 +69,6 @@ def main(stream, out_stream, data):
 
 
 if __name__ == '__main__':
-   # Frequency range
-  x_f = 1.0 * np.arange(-nFFT / 2 + 1, nFFT / 2) / nFFT * RATE
-
   wf = wave.open('pop.wav', 'rb')
   dump = wf.readframes(512)
   data = wf.readframes(chunk)
@@ -90,8 +85,6 @@ if __name__ == '__main__':
                 rate=RATE,
                 input=True,
                 frames_per_buffer=BUF_SIZE)
-
-  #out_stream = p.open(format=pyaudio.paFloat32, channels=1, rate=RATE, output=1)
 
   try:
     main(stream, out_stream, data)
